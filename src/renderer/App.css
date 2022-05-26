@@ -1,0 +1,44 @@
+.desktop {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(31, 31, 31);
+  height: 100vh;
+  font-size: 26px;
+}
+
+.onOff{
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  color: white;
+}
+
+.card {
+  margin: 15px;
+  /* transition: all 1s; */
+
+}
+
+.card:hover {
+  /* transition: all 1s; */
+  cursor: pointer;
+  transform: scale3d(1.1, 1.1, 1.1);
+}
+
+.ban-card {
+  box-shadow: 0 0 10px 5px rgba(255, 0, 0, 0.5);
+}
+
+.ban-card:hover {
+  box-shadow: 0 0 10px 9px rgba(255, 0, 0, 0.5);
+}
+
+.pick-card {
+  box-shadow: 0 0 10px 5px rgba(0, 255, 0, 0.5);
+}
+
+.pick-card:hover {
+  box-shadow: 0 0 10px 9px rgba(0, 255, 0, 0.5);
+}
