@@ -15,21 +15,9 @@ import log from 'electron-log';
 import Store from 'electron-store';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { lolapi } from './api/lolapi';
 import unhandled from 'electron-unhandled';
 
-let api = new lolapi();
-
-let request = require('request-promise');
-const btoa = require('btoa');
-let location = '';
-const readline = require('readline');
-const dateFormat = require('dateformat');
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
+import { authenticate, request, connect, LeagueClient } from 'league-connect';
 
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -107,12 +95,6 @@ const createWindow = async () => {
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
-  const errorHandle = `
-  window.onerror = (err) => {
-      console.log(err);
-  };
- 
-  console.log("Injected startup code")`;
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
@@ -125,8 +107,62 @@ const createWindow = async () => {
     } else {
       mainWindow.show();
     }
-    await mainWindow.webContents.executeJavaScript(errorHandle);
-    api.start();
+    const credentials = await authenticate({ awaitConnection: true });
+
+    await sleep(10000);
+
+    const client = new LeagueClient(credentials);
+    const ws = await connect(credentials);
+
+    const summoner = await (
+      await request(
+        {
+          method: 'GET',
+          url: '/lol-summoner/v1/current-summoner',
+        },
+        credentials
+      )
+    ).json();
+
+    const champions = await (
+      await request(
+        {
+          method: 'GET',
+          url:
+            '/lol-champions/v1/inventories/' +
+            summoner.summonerId +
+            '/champions',
+        },
+        credentials
+      )
+    ).json();
+    console.log(champions);
+
+    const dataSend = {
+      sucess: true,
+      message: {
+        summoner,
+        champions,
+      },
+    };
+    mainWindow.webContents.send('connect', dataSend);
+
+    ws.on('message', (message) => {
+      //   console.log(message)
+    });
+
+    client.on('connect', (newCredentials) => {
+      // newCredentials: Each time the Client is started, new credentials are made
+      // this variable contains the new credentials.
+      console.log('RECONECTADOOO');
+      console.log(newCredentials);
+    });
+
+    client.on('disconnect', () => {
+      console.log('disconnected');
+    });
+
+    client.start(); // Start listening for process updates
   });
 
   mainWindow.on('closed', () => {
@@ -179,32 +215,4 @@ ipcMain.on('electron-store-set', async (event, key, val) => {
 });
 ipcMain.on('electron-store-clear', async (event) => {
   store.clear();
-});
-
-// *************** //
-// *** LOL API *** //
-// *************** //
-api.on('connect', async (data: any) => {
-  if (mainWindow === null) {
-    return;
-  }
-  let summoner = api.getCurentSummor();
-  let champions = await api.getListChampions();
-  const dataSend = {
-    sucess: true,
-    message: {
-      summoner,
-      champions,
-    },
-  };
-  mainWindow.webContents.send('connect', dataSend);
-  console.log('CONECTED TO API', data);
-});
-
-api.on('error', () => {
-  console.log('There was an error');
-  // api.stop();
-  sleep(10000).then(() => {
-    api.start();
-  });
 });

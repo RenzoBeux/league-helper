@@ -1,14 +1,17 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Button, Card, Switch } from '@blueprintjs/core';
+import { Button, Card, Spinner, Switch } from '@blueprintjs/core';
 import { BANS } from 'renderer/utils/constants';
-
 
 export const Desktop = () => {
   const [isOn, setIsOn] = React.useState(false);
+  const [lolClientFound, setLolClientFound] = React.useState(false);
   const navigate = useNavigate();
 
+  window.electron.ipcRenderer.on('connect', (event, data) => {
+    setLolClientFound(true);
+  });
 
   return (
     <div className="desktop">
@@ -22,6 +25,7 @@ export const Desktop = () => {
           setIsOn(!isOn);
         }}
       />
+      {!lolClientFound && <Spinner></Spinner>}
       <Card
         className={'ban-card card'}
         onClick={() => {
