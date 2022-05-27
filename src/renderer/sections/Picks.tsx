@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { BANS, PICKS } from '../utils/constants';
 import { IChamp } from 'renderer/interfaces/IChamp';
 import { useAppDispatch, useAppSelector } from 'renderer/state/hooks';
-import { setPicks } from 'renderer/state/preferences/preferencesSlice';
+import { setPicks } from 'renderer/state/slices/preferencesSlice';
 
 const Picks = () => {
   const picks = useAppSelector((state) => state.preferences.picks);

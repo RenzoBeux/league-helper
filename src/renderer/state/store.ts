@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
-import { preferencesSlice } from './preferences/preferencesSlice'
+import { preferencesSlice } from './slices/preferencesSlice'
 // ...
 
 const store = configureStore({

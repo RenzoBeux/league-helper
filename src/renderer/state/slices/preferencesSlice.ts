@@ -13,17 +13,18 @@ const initialState: PreferencesState = {
   picks: [],
 } as PreferencesState;
 
+const reducer = {
+  setBans: (state, action: PayloadAction<Array<IChamp>>) => {
+    state.bans = action.payload;
+  },
+  setPicks: (state, action: PayloadAction<Array<IChamp>>) => {
+    state.picks = action.payload;
+  },
+};
 export const preferencesSlice = createSlice({
   name: 'preferences',
   initialState,
-  reducers: {
-    setBans: (state, action: PayloadAction<Array<IChamp>>) => {
-      state.bans = action.payload;
-    },
-    setPicks: (state, action: PayloadAction<Array<IChamp>>) => {
-      state.picks = action.payload;
-    },
-  },
+  reducers: reducer,
 });
 
 // Action creators are generated for each case reducer function

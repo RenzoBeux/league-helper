@@ -18,7 +18,7 @@ import {
   PICKS,
 } from './utils/constants';
 import { useAppDispatch } from './state/hooks';
-import { setBans, setPicks } from './state/preferences/preferencesSlice';
+import { setBans, setPicks } from './state/slices/preferencesSlice';
 import { IChamp } from './interfaces/IChamp';
 import Picks from './sections/Picks';
 
