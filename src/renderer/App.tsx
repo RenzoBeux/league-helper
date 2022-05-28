@@ -16,18 +16,18 @@ import {
   HANDLE_FETCH_DATA,
   HANDLE_SAVE_DATA,
   PICKS,
-} from './utils/constants';
+} from '../common/constants';
 import { useAppDispatch } from './state/hooks';
 import { setBans, setPicks } from './state/slices/preferencesSlice';
-import { IChamp } from './interfaces/IChamp';
 import Picks from './sections/Picks';
+import { Champion } from 'common/Champion';
 
 function App() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    let bans: Array<IChamp> = window.electron.store.get(BANS) || [];
-    let picks: Array<IChamp> = window.electron.store.get(PICKS) || [];
+    let bans: Array<Champion> = window.electron.store.get(BANS) || [];
+    let picks: Array<Champion> = window.electron.store.get(PICKS) || [];
     dispatch(setBans(bans));
     dispatch(setPicks(picks));
   }, []);

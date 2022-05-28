@@ -1,0 +1,34 @@
+{
+    active: true,
+    alias: 'Draven',
+    banVoPath: '/lol-game-data/assets/v1/champion-ban-vo/119.ogg',
+    baseLoadScreenPath: '/lol-game-data/assets/ASSETS/Characters/Draven/Skins/Base/DravenLoadScreen.jpg',
+    baseSplashPath: '/lol-game-data/assets/v1/champion-splashes/119/119000.jpg',
+    botEnabled: false,
+    chooseVoPath: '/lol-game-data/assets/v1/champion-choose-vo/119.ogg',
+    disabledQueues: [],
+    freeToPlay: false,
+    id: 119,
+    name: 'Draven',
+    ownership: { freeToPlayReward: false, owned: true, rental: [Object] },
+    passive: {
+      description: 'Draven obtiene Adoraci├│n de sus seguidores cuando atrapa un Hacha Giratoria o cuando mata a un s├║bdito, monstruo o torre. Asesinar campeones enemigos le otorga oro adicional a Draven seg├║n la cantidad de Adoraci├│n que tenga.',
+      name: 'League of Draven'
+    },
+    purchased: 1566469338000,
+    rankedPlayEnabled: true,
+    roles: [ 'marksman' ],
+    skins: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    spells: [ [Object], [Object], [Object], [Object] ],
+    squarePortraitPath: '/lol-game-data/assets/v1/champion-icons/119.png',
+    stingerSfxPath: '/lol-game-data/assets/v1/champion-sfx-audios/119.ogg',
+    tacticalInfo: { damageType: 'kPhysical', difficulty: 3, style: 2 },
+    title: 'el Glorioso Ejecutor'
+}

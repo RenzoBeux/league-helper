@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button, Card, Spinner, Switch } from '@blueprintjs/core';
-import { BANS } from 'renderer/utils/constants';
+import { BANS } from 'common/constants';
 
 export const Desktop = () => {
   const [isOn, setIsOn] = React.useState(false);

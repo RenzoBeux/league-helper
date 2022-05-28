@@ -18,12 +18,17 @@ import { resolveHtmlPath } from './util';
 import unhandled from 'electron-unhandled';
 
 import { authenticate, request, connect, LeagueClient } from 'league-connect';
+import { LolApi } from './api/LolApi';
+import { BANS, PICKS } from '../common/constants';
+import { Champion } from 'common/Champion';
 
-function sleep(ms) {
+function sleep(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }
+
+let API: LolApi;
 
 export default class AppUpdater {
   constructor() {
@@ -86,8 +91,8 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
+    width: 1280,
+    height: 720,
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
@@ -136,7 +141,15 @@ const createWindow = async () => {
         credentials
       )
     ).json();
+
     console.log(champions);
+
+    let bans: Champion[] = (await store.get(BANS)) as Champion[];
+    let picks: Champion[] = (await store.get(PICKS)) as Champion[];
+
+    console.log(bans, picks);
+
+    API = new LolApi(credentials, summoner, bans, picks);
 
     const dataSend = {
       sucess: true,
@@ -148,14 +161,15 @@ const createWindow = async () => {
     mainWindow.webContents.send('connect', dataSend);
 
     ws.on('message', (message) => {
-      //   console.log(message)
+      if (typeof message === 'string') {
+        API.handleWebSocket(message);
+      }
     });
 
     client.on('connect', (newCredentials) => {
       // newCredentials: Each time the Client is started, new credentials are made
       // this variable contains the new credentials.
       console.log('RECONECTADOOO');
-      console.log(newCredentials);
     });
 
     client.on('disconnect', () => {
@@ -211,6 +225,14 @@ ipcMain.on('electron-store-get', async (event, val) => {
   event.returnValue = store.get(val);
 });
 ipcMain.on('electron-store-set', async (event, key, val) => {
+  if (API) {
+    if (key === BANS) {
+      API.setBans(val);
+    }
+    if (key === PICKS) {
+      API.setPicks(val);
+    }
+  }
   store.set(key, val);
 });
 ipcMain.on('electron-store-clear', async (event) => {

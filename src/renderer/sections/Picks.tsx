@@ -3,7 +3,7 @@ import { ItemRenderer, Select } from '@blueprintjs/select';
 // import { ipcRenderer } from 'electron';
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BANS, PICKS } from '../utils/constants';
+import { BANS, PICKS } from '../../common/constants';
 import { IChamp } from 'renderer/interfaces/IChamp';
 import { useAppDispatch, useAppSelector } from 'renderer/state/hooks';
 import { setPicks } from 'renderer/state/slices/preferencesSlice';

@@ -3,20 +3,20 @@ import { ItemRenderer, Select } from '@blueprintjs/select';
 // import { ipcRenderer } from 'electron';
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BANS } from '../utils/constants';
-import { IChamp } from 'renderer/interfaces/IChamp';
+import { BANS } from '../../common/constants';
 import { useAppDispatch, useAppSelector } from 'renderer/state/hooks';
 import { setBans } from 'renderer/state/slices/preferencesSlice';
+import { Champion } from 'common/Champion';
 
 const Bans = () => {
   const bans = useAppSelector((state) => state.preferences.bans);
   const dispatch = useAppDispatch();
 
   // save an item
-  const addItem = (item: IChamp) => {
+  const addItem = (item: Champion) => {
     let aux = [...bans];
     console.log(aux);
-    if (aux.some((ban: IChamp) => ban.id === item.id)) {
+    if (aux.some((ban: Champion) => ban.id === item.id)) {
       return;
     }
     aux.push(item);
@@ -25,7 +25,7 @@ const Bans = () => {
 
   useEffect(() => {});
 
-  const renderChamp: ItemRenderer<IChamp> = (
+  const renderChamp: ItemRenderer<Champion> = (
     champ,
     { handleClick, modifiers, query }
   ) => {
@@ -55,11 +55,11 @@ const Bans = () => {
   };
   const handleDelete = (id: number) => {
     let aux = [...bans];
-    aux = aux.filter((ban: IChamp) => ban.id !== id);
+    aux = aux.filter((ban: Champion) => ban.id !== id);
     dispatch(setBans(aux));
   };
 
-  const ChampSelect = Select.ofType<IChamp>();
+  const ChampSelect = Select.ofType<Champion>();
   const navigate = useNavigate();
   return (
     <div className="bans">
@@ -74,10 +74,7 @@ const Bans = () => {
       <Card>
         <h4>HOLA!</h4>
         <ChampSelect
-          items={[
-            { id: 1, name: 'a' },
-            { id: 2, name: 'b' },
-          ]}
+          items={[]}
           itemRenderer={renderChamp}
           onItemSelect={addItem}
         >
@@ -85,7 +82,7 @@ const Bans = () => {
         </ChampSelect>
       </Card>
       {bans &&
-        bans.map((ban: IChamp) => {
+        bans.map((ban: Champion) => {
           return (
             <Card key={ban.id}>
               {ban.name}
