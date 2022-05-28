@@ -4,19 +4,19 @@ import { Champion } from 'common/Champion';
 // Define a type for the slice state
 export interface DataState {
   champions: Array<any>;
-  ownedChampion: Array<Champion>;
+  ownedChampions: Array<Champion>;
 }
 
 // Define the initial state using that type
 const initialState: DataState = {
   champions: [],
-  ownedChampion: [],
+  ownedChampions: [],
 } as DataState;
 
 const reducer = {
   setChampions: (state: DataState, action: PayloadAction<Array<any>>) => {
     state.champions = action.payload;
-    state.ownedChampion = action.payload
+    state.ownedChampions = action.payload
       .filter((champion) => {
         return champion.ownership.owned === true;
       })

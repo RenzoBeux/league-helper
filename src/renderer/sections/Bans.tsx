@@ -1,5 +1,5 @@
 import { Card, Button, MenuItem } from '@blueprintjs/core';
-import { ItemRenderer, Select } from '@blueprintjs/select';
+import { ItemPredicate, ItemRenderer, Select } from '@blueprintjs/select';
 // import { ipcRenderer } from 'electron';
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ import { Champion } from 'common/Champion';
 
 const Bans = () => {
   const bans = useAppSelector((state) => state.preferences.bans);
-  const ownedChampions = useAppSelector((state) => state.data.ownedChampion);
+  const champions = useAppSelector((state) => state.data.champions);
   const dispatch = useAppDispatch();
 
   // save an item
@@ -45,6 +45,10 @@ const Bans = () => {
     );
   };
 
+  const filterChamp: ItemPredicate<IChamp> = (query, champ) => {
+    return champ.name.toLowerCase().indexOf(query.toLowerCase()) >=0;
+  }
+
   const handleSaveButton = () => {
     console.log(bans);
     window.electron.store.set(BANS, bans);
@@ -75,7 +79,8 @@ const Bans = () => {
       <Card>
         <h4>HOLA!</h4>
         <ChampSelect
-          items={ownedChampions}
+          itemPredicate={filterChamp}
+          items={champions}
           itemRenderer={renderChamp}
           onItemSelect={addItem}
         >
