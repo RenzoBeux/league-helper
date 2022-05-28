@@ -21,6 +21,7 @@ import { useAppDispatch } from './state/hooks';
 import { setBans, setPicks } from './state/slices/preferencesSlice';
 import Picks from './sections/Picks';
 import { Champion } from 'common/Champion';
+import { setChampions } from './state/slices/dataSlice';
 
 function App() {
   const dispatch = useAppDispatch();
@@ -33,6 +34,7 @@ function App() {
   }, []);
 
   window.electron.ipcRenderer.on('connect', (event, data) => {
+    dispatch(setChampions(event.message.champions));
     console.log(event);
   });
 

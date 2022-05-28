@@ -1,10 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { IChamp } from '../../interfaces/IChamp';
+import { Champion } from 'common/Champion';
 
 // Define a type for the slice state
 export interface PreferencesState {
-  bans: Array<IChamp>;
-  picks: Array<IChamp>;
+  bans: Array<Champion>;
+  picks: Array<Champion>;
 }
 
 // Define the initial state using that type
@@ -14,10 +14,10 @@ const initialState: PreferencesState = {
 } as PreferencesState;
 
 const reducer = {
-  setBans: (state, action: PayloadAction<Array<IChamp>>) => {
+  setBans: (state:PreferencesState, action: PayloadAction<Array<Champion>>) => {
     state.bans = action.payload;
   },
-  setPicks: (state, action: PayloadAction<Array<IChamp>>) => {
+  setPicks: (state:PreferencesState, action: PayloadAction<Array<Champion>>) => {
     state.picks = action.payload;
   },
 };

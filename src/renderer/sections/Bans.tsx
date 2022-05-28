@@ -10,6 +10,7 @@ import { Champion } from 'common/Champion';
 
 const Bans = () => {
   const bans = useAppSelector((state) => state.preferences.bans);
+  const ownedChampions = useAppSelector((state) => state.data.ownedChampion);
   const dispatch = useAppDispatch();
 
   // save an item
@@ -74,7 +75,7 @@ const Bans = () => {
       <Card>
         <h4>HOLA!</h4>
         <ChampSelect
-          items={[]}
+          items={ownedChampions}
           itemRenderer={renderChamp}
           onItemSelect={addItem}
         >

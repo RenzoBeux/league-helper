@@ -129,25 +129,37 @@ const createWindow = async () => {
       )
     ).json();
 
-    const champions = await (
-      await request(
-        {
-          method: 'GET',
-          url:
-            '/lol-champions/v1/inventories/' +
-            summoner.summonerId +
-            '/champions',
-        },
-        credentials
-      )
-    ).json();
-
-    console.log(champions);
+    const championsReq = await request(
+      {
+        method: 'GET',
+        url:
+          '/lol-champions/v1/inventories/' + summoner.summonerId + '/champions',
+      },
+      credentials
+    );
+    let champions;
+    if (championsReq.status == 200) {
+      champions = await championsReq.json();
+    } else {
+      setTimeout(async () => {
+        let res = await (
+          await request(
+            {
+              method: 'GET',
+              url:
+                '/lol-champions/v1/inventories/' +
+                summoner.summonerId +
+                '/champions',
+            },
+            credentials
+          )
+        ).json();
+        champions = res;
+      }, 10000);
+    }
 
     let bans: Champion[] = (await store.get(BANS)) as Champion[];
     let picks: Champion[] = (await store.get(PICKS)) as Champion[];
-
-    console.log(bans, picks);
 
     API = new LolApi(credentials, summoner, bans, picks);
 
@@ -237,4 +249,5 @@ ipcMain.on('electron-store-set', async (event, key, val) => {
 });
 ipcMain.on('electron-store-clear', async (event) => {
   store.clear();
+  console.log('CLEARED');
 });
