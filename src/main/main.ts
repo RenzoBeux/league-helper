@@ -19,8 +19,9 @@ import unhandled from 'electron-unhandled';
 
 import { authenticate, request, connect, LeagueClient } from 'league-connect';
 import { LolApi } from './api/LolApi';
-import { BANS, PICKS } from '../common/constants';
+import { BANS, PICKS, ROLE } from '../common/constants';
 import { Champion } from 'common/Champion';
+import { Role } from 'common/Role';
 
 function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -113,7 +114,7 @@ const createWindow = async () => {
       mainWindow.show();
     }
     const credentials = await authenticate({ awaitConnection: true });
-
+    console.log(credentials);
     await sleep(10000);
 
     const client = new LeagueClient(credentials);
@@ -158,10 +159,11 @@ const createWindow = async () => {
       }, 10000);
     }
 
-    let bans: Champion[] = (await store.get(BANS)) as Champion[];
-    let picks: Champion[] = (await store.get(PICKS)) as Champion[];
+    const bans: Champion[] = (await store.get(BANS)) as Champion[];
+    const picks: Champion[] = (await store.get(PICKS)) as Champion[];
+    const role: Role = (await store.get(ROLE)) as Role;
 
-    API = new LolApi(credentials, summoner, bans, picks);
+    API = new LolApi(credentials, summoner, bans, picks, role);
 
     const dataSend = {
       sucess: true,
