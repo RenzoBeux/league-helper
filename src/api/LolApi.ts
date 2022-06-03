@@ -1,25 +1,27 @@
-import { Champion } from 'common/Champion';
-import { Role } from 'common/Role';
-import {
-  authenticate,
-  request,
-  connect,
-  LeagueClient,
-  Credentials,
-} from 'league-connect';
+import { Champion } from 'api/entities/Champion';
+import { Role } from 'api/entities/Role';
+import { request, Credentials } from 'league-connect';
 import { Cell, Type } from './entities/Cell';
-import { GameSession } from './entities/GameSession';
+import { GameSession } from './GameSession';
 import { Summoner } from './entities/Summoner';
-import { TeamElement } from './entities/TeamElement';
+import { Event } from './MessageTypes/Event';
+import { FrontendMessage } from './MessageTypes/FrontendMessage';
+import { RawChampion } from './entities/RawChampion';
 
-export class LolApi {
+export class LoLApi {
   private credentials: Credentials | undefined;
+  private allChampions: RawChampion[];
+  private ownedChampions: Champion[];
   private isTurnedOn = false;
+  private summoner: Summoner;
   private orderedPicks: Champion[] = [];
   private orderedBans: Champion[] = [];
-  private summoner: Summoner;
   private expectedRole: Role;
   private gameSession: GameSession = new GameSession(-1, [], -1);
+  private sendToFrontend: (
+    event: Event,
+    FrontendMessage: FrontendMessage
+  ) => void;
 
   //this function looks for a cell in action list
   private findCell(
@@ -29,15 +31,10 @@ export class LolApi {
     isInProgress?: boolean
   ): Cell | null {
     let temp = null;
-    let predicate = (cell: Cell) => cell.id === cellId;
-    if (type) {
-      predicate = (cell: Cell) => predicate(cell) && cell.type === type;
-      if (isInProgress !== undefined) {
-        predicate = (cell: Cell) => predicate(cell) && cell.isInProgress;
-      }
-    } else if (isInProgress !== undefined) {
-      predicate = (cell: Cell) => predicate(cell) && cell.isInProgress;
-    }
+    let predicate = (cell: Cell) =>
+      cell.id === cellId &&
+      (type === undefined || cell.type === type) &&
+      (isInProgress === undefined || cell.isInProgress === isInProgress);
 
     //each item is an array wich contains cells
     list.forEach((item) => {
@@ -49,29 +46,8 @@ export class LolApi {
     return temp;
   }
 
-  private findBan(team: TeamElement[]): number {
-    let ban = -1;
-
-    //i need to check none of my team wants to pick my intended ban
-    // otherwise my intended ban is the next on the list and shall check again
-
-    const intents = [];
-    for (let index = 0; index < team.length; index++) {
-      const player = team[index];
-      intents.push(player.championPickIntent);
-    }
-
-    //This should always find an id to ban beacuse it is supposed that the user
-    //had input 5 bans
-    for (let index = 0; index < this.orderedBans.length; index++) {
-      const element = this.orderedBans[index];
-      if (!intents.includes(element.id)) {
-        ban = element.id;
-        break;
-      }
-    }
-
-    return ban;
+  private findBan(): number {
+    return this.gameSession.findBan(this.orderedBans);
   }
 
   private findPick(): number {
@@ -96,19 +72,69 @@ export class LolApi {
     }, 50);
   }
 
+  private doPatch(action: Cell) {
+    setTimeout(() => {
+      request(
+        {
+          method: 'PATCH',
+          url: '/lol-champ-select/v1/session/actions/' + action.id,
+          body: action,
+        },
+        this.credentials
+      );
+    }, 500);
+  }
+
+  private handleBan(action: Cell) {
+    action.championId = this.findBan();
+    action.completed = true;
+    //TODO: wait for last seconds before finishing the action to let user override it
+    this.doPatch(action);
+  }
+
+  private handlePick(action: Cell) {
+    action.championId = this.findPick();
+    action.completed = true;
+    this.doPatch(action);
+  }
+  private async sendUpdate() {
+    const role = this.gameSession.getRole();
+    const picks = this.gameSession.getPickedChampions();
+    const bans = this.gameSession.getBannedChampions();
+    const pickedChampions = picks.map((championNumber) =>
+      this.allChampions.find((champion) => champion.id === championNumber)
+    );
+    const bannedChampions = bans.map((championNumber) =>
+      this.allChampions.find((champion) => champion.id === championNumber)
+    );
+    const phase = this.gameSession.getPhase();
+    const update: FrontendMessage = {
+      pickedChampions,
+      bannedChampions,
+      role,
+      phase,
+    };
+    this.sendToFrontend(Event.StatusUpdate, update);
+  }
+
   //Constructor
   constructor(
     credentials: Credentials,
     summoner: Summoner,
     orderedPicks: Champion[],
     orderedBans: Champion[],
-    expectedRole: Role
+    expectedRole: Role,
+    allChampions: RawChampion[],
+    sendToFrontend: (event: Event, FrontendMessage: FrontendMessage) => void
   ) {
     this.credentials = credentials;
     this.summoner = summoner;
     this.orderedPicks = orderedPicks;
     this.orderedBans = orderedBans;
     this.expectedRole = expectedRole;
+    this.allChampions = allChampions;
+    this.ownedChampions = allChampions.filter((champion) => champion.ownership.owned);
+    this.sendToFrontend = sendToFrontend;
   }
 
   switch(state: boolean) {
@@ -148,13 +174,13 @@ export class LolApi {
 
       this.gameSession.processData(js.data.actions);
 
-      //SHIT DOWN AUTO PICK IF ROLE IS NOT AS EXPECTED
+      //SHUT DOWN AUTO PICK IF ROLE IS NOT AS EXPECTED
       //WILL CHANGE LATER WHEN WE HAVE PROFILES
       if (this.expectedRole !== this.gameSession.getRole()) {
         this.isTurnedOn = false;
       }
       /*
-        action is the action that is in progress of the player who is tunning this tool
+        action is the action that is in progress of the player who is running this tool
         if there is no action in progress for current player then null is returned
       */
       action = this.findCell(js.data.actions, localCellId, undefined, true);
@@ -171,45 +197,21 @@ export class LolApi {
 
         // If there is no action in progress for current player then return
         if (!action) return;
-        let actionId = action.id;
-
-        // BANNING PHASE
-        if (action.type == 'ban') {
-          if (action.isInProgress) {
-            action.championId = this.findBan(myTeam);
-            action.completed = true;
-            setTimeout(() => {
-              request(
-                {
-                  method: 'PATCH',
-                  url: '/lol-champ-select/v1/session/actions/' + actionId,
-                  body: action,
-                },
-                this.credentials
-              );
-            }, 50);
-          }
-          return;
-        }
-        // PICKING PHASE
-        if (action.type == 'pick') {
-          if (action.isInProgress) {
-            action.championId = this.findPick();
-            action.completed = true;
-            setTimeout(() => {
-              request(
-                {
-                  method: 'PATCH',
-                  url: '/lol-champ-select/v1/session/actions/' + actionId,
-                  body: action,
-                },
-                this.credentials
-              );
-            }, 50);
-          }
-          return;
+        //TODO: Change this to use gameSession info
+        switch (action.type) {
+          case Type.ban:
+            this.handleBan(action);
+            break;
+          case Type.pick:
+            this.handlePick(action);
+            break;
+          default:
+            break;
         }
       }
+
+      //SEND DATA TO FRONTEND
+      this.sendUpdate();
       // end if turned on
     } catch (e) {
       console.error(e);

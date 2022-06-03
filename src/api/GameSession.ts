@@ -1,7 +1,11 @@
-import { Phase } from 'common/Phase';
-import { Role } from 'common/Role';
-import { Cell, Type } from './Cell';
-import { TeamElement } from './TeamElement';
+import { Champion } from './entities/Champion';
+import { Phase } from './entities/Phase';
+import { Role } from './entities/Role';
+import { Cell, Type } from './entities/Cell';
+import { TeamElement } from './entities/TeamElement';
+import { FrontendMessage } from './MessageTypes/FrontendMessage';
+import { Event } from './MessageTypes/Event';
+import { StatusMessage } from './MessageTypes/StatusMessage';
 
 export class GameSession {
   private gameId: number;
@@ -11,7 +15,11 @@ export class GameSession {
   private myTeam: TeamElement[];
   private phase: Phase = Phase.Banning;
 
-  constructor(gameId: number, myTeam: TeamElement[], localCellId: number) {
+  constructor(
+    gameId: number,
+    myTeam: TeamElement[],
+    localCellId: number,
+  ) {
     this.gameId = gameId;
     this.myTeam = myTeam;
     for (let index = 0; index < myTeam.length; index++) {
@@ -48,6 +56,33 @@ export class GameSession {
     });
   }
 
+  public findBan(orderedBans: Champion[]): number {
+    let ban = -1;
+    const intents = new Set();
+    for (let index = 0; index < this.myTeam.length; index++) {
+      const player = this.myTeam[index];
+      intents.add(player.championPickIntent);
+    }
+
+    //This should always find an id to ban because it is supposed that the user
+    //had input 5 bans
+    for (let index = 0; index < orderedBans.length; index++) {
+      const element = orderedBans[index];
+      if (!intents.has(element.id)) {
+        ban = element.id;
+        break;
+      }
+    }
+
+    return ban;
+  }
+
+  public findPick(orderedPicks: Champion[]): number {
+    let pick = -1;
+    //I should take into account the intents, but for now... meh
+    return pick;
+  }
+
   public getGameId(): number {
     return this.gameId;
   }
@@ -65,5 +100,9 @@ export class GameSession {
 
   public getPhase(): Phase {
     return this.phase;
+  }
+
+  public getMyTeam(): TeamElement[] {
+    return this.myTeam;
   }
 }

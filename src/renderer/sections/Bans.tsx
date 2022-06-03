@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { BANS } from '../../common/constants';
 import { useAppDispatch, useAppSelector } from 'renderer/state/hooks';
 import { setBans } from 'renderer/state/slices/preferencesSlice';
-import { Champion } from 'common/Champion';
+import { Champion } from 'api/entities/Champion';
 
 const Bans = () => {
   const bans = useAppSelector((state) => state.preferences.bans);
