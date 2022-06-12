@@ -7,12 +7,14 @@ import { Summoner } from './entities/Summoner';
 import { Event } from './MessageTypes/Event';
 import { FrontendMessage } from './MessageTypes/FrontendMessage';
 import { RawChampion } from './entities/RawChampion';
+import { ReadyCheckData } from './entities/ReadyCheckData';
 
 export class LoLApi {
   private credentials: Credentials | undefined;
   private allChampions: RawChampion[];
   private ownedChampions: Champion[];
-  private isTurnedOn = false;
+  private autoPickIsTurnedOn = false;
+  private autoAcceptIsTurnedOn = false;
   private summoner: Summoner;
   private orderedPicks: Champion[] = [];
   private orderedBans: Champion[] = [];
@@ -133,16 +135,26 @@ export class LoLApi {
     this.orderedBans = orderedBans;
     this.expectedRole = expectedRole;
     this.allChampions = allChampions;
-    this.ownedChampions = allChampions.filter((champion) => champion.ownership.owned);
+    this.ownedChampions = allChampions.filter(
+      (champion) => champion.ownership.owned
+    );
     this.sendToFrontend = sendToFrontend;
   }
 
-  switch(state: boolean) {
-    this.isTurnedOn = state;
+  switchAutoPick(state: boolean) {
+    this.autoPickIsTurnedOn = state;
   }
 
-  isOn() {
-    return this.isTurnedOn;
+  isAutoPickOn() {
+    return this.autoPickIsTurnedOn;
+  }
+
+  isAutoAcceptOn() {
+    return this.autoAcceptIsTurnedOn;
+  }
+
+  switchAutoAccept(state: boolean) {
+    this.autoAcceptIsTurnedOn = state;
   }
 
   setPicks(picks: Champion[]): void {
@@ -160,59 +172,90 @@ export class LoLApi {
     try {
       //GET SOME DATA
       let js = JSON.parse(data)[2];
-      //We only want this endpoint
-      if (!js.uri.includes('lol-champ-select/v1/session')) return;
 
-      if (!js.data.actions[0]) return;
-
-      let myTeam = js.data.myTeam;
-      localCellId = js.data.localPlayerCellId;
-
-      if (js.gameId !== this.gameSession.getGameId()) {
-        this.gameSession = new GameSession(js.gameId, myTeam, localCellId);
-      }
-
-      this.gameSession.processData(js.data.actions);
-
-      //SHUT DOWN AUTO PICK IF ROLE IS NOT AS EXPECTED
-      //WILL CHANGE LATER WHEN WE HAVE PROFILES
-      if (this.expectedRole !== this.gameSession.getRole()) {
-        this.isTurnedOn = false;
-      }
-      /*
-        action is the action that is in progress of the player who is running this tool
-        if there is no action in progress for current player then null is returned
-      */
-      action = this.findCell(js.data.actions, localCellId, undefined, true);
-
-      //Execute this code only if autopick is turned on
-      if (this.isTurnedOn) {
-        //We want this code to be here, before returning is action is null
-        //because on planning phase no one is in progress
-        //PLANNING PHASE
-        if (js.data.timer.phase === 'PLANNING') {
-          this.handlePickIntent(js.data.actions, localCellId);
-          return;
-        }
-
-        // If there is no action in progress for current player then return
-        if (!action) return;
-        //TODO: Change this to use gameSession info
-        switch (action.type) {
-          case Type.ban:
-            this.handleBan(action);
-            break;
-          case Type.pick:
-            this.handlePick(action);
-            break;
-          default:
-            break;
+      //if it is ready check message
+      if (js.uri.includes('/lol-matchmaking/v1/ready-check')) {
+        const readyData: ReadyCheckData = js.data;
+        if (this.autoAcceptIsTurnedOn) {
+          if (
+            readyData.state === 'InProgress' &&
+            readyData.playerResponse === 'None'
+          ) {
+            //if it is in progress and the player has not responded yet
+            // accepts the game
+            setTimeout(() => {
+              request(
+                {
+                  method: 'POST',
+                  url: '/lol-matchmaking/v1/ready-check/accept',
+                },
+                this.credentials
+              );
+            }, 100);
+          }
         }
       }
 
-      //SEND DATA TO FRONTEND
-      this.sendUpdate();
-      // end if turned on
+      //if it is a game session message
+      if (js.uri.includes('lol-champ-select/v1/session')) {
+        if (!js.data.actions[0]) return;
+
+        let myTeam = js.data.myTeam;
+        localCellId = js.data.localPlayerCellId;
+
+        if (js.gameId !== this.gameSession.getGameId()) {
+          this.gameSession = new GameSession(js.gameId, myTeam, localCellId);
+        }
+
+        this.gameSession.processData(js.data.actions);
+
+        //SHUT DOWN AUTO PICK IF ROLE IS NOT AS EXPECTED
+        //WILL CHANGE LATER WHEN WE HAVE PROFILES
+        if (this.expectedRole !== this.gameSession.getRole()) {
+          this.autoPickIsTurnedOn = false;
+        }
+        /*
+          action is the action that is in progress of the player who is running this tool
+          if there is no action in progress for current player then null is returned
+        */
+        action = this.findCell(js.data.actions, localCellId, undefined, true);
+
+        //Execute this code only if autopick is turned on
+        if (this.autoPickIsTurnedOn) {
+          //We want this code to be here, before returning is action is null
+          //because on planning phase no one is in progress
+          //PLANNING PHASE
+          if (js.data.timer.phase === 'PLANNING') {
+            this.handlePickIntent(js.data.actions, localCellId);
+            return;
+          }
+
+          // If there is no action in progress for current player then return
+          if (!action) return;
+          //TODO: Change this to use gameSession info
+          switch (action.type) {
+            case Type.ban:
+              this.handleBan(action);
+              break;
+            case Type.pick:
+              this.handlePick(action);
+              break;
+            default:
+              break;
+          }
+        }
+        console.log('---------------------------------------');
+        console.log('BANNED!!!', this.gameSession.getBannedChampions());
+        console.log('PICKED!!!', this.gameSession.getPickedChampions());
+        console.log('ROLE!!!', this.gameSession.getRole());
+        console.log('PHASE!!!', this.gameSession.getPhase());
+        console.log('---------------------------------------');
+
+        //SEND DATA TO FRONTEND
+        this.sendUpdate();
+        // end if turned on
+      }
+
     } catch (e) {
       console.error(e);
     }

@@ -11,15 +11,11 @@ export class GameSession {
   private gameId: number;
   private bannedChampions: Set<number> = new Set();
   private pickedChampions: Set<number> = new Set();
-  private role: Role = Role.Support;
+  private role: Role = Role.Top;
   private myTeam: TeamElement[];
   private phase: Phase = Phase.Banning;
 
-  constructor(
-    gameId: number,
-    myTeam: TeamElement[],
-    localCellId: number,
-  ) {
+  constructor(gameId: number, myTeam: TeamElement[], localCellId: number) {
     this.gameId = gameId;
     this.myTeam = myTeam;
     for (let index = 0; index < myTeam.length; index++) {
@@ -80,6 +76,18 @@ export class GameSession {
   public findPick(orderedPicks: Champion[]): number {
     let pick = -1;
     //I should take into account the intents, but for now... meh
+    for (let index = 0; index < orderedPicks.length; index++) {
+      const element = orderedPicks[index];
+      //we check the intended pick is not banned neither picked
+      if (this.bannedChampions.has(element.id)) {
+        continue;
+      }
+      if (this.pickedChampions.has(element.id)) {
+        continue;
+      }
+      pick = element.id;
+      break;
+    }
     return pick;
   }
 
