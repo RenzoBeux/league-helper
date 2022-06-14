@@ -45,9 +45,9 @@ const Bans = () => {
     );
   };
 
-  const filterChamp: ItemPredicate<IChamp> = (query, champ) => {
-    return champ.name.toLowerCase().indexOf(query.toLowerCase()) >=0;
-  }
+  const filterChamp: ItemPredicate<Champion> = (query, champ) => {
+    return champ.name.toLowerCase().indexOf(query.toLowerCase()) >= 0;
+  };
 
   const handleSaveButton = () => {
     console.log(bans);

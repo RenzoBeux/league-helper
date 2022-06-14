@@ -14,7 +14,7 @@ export class LoLApi {
   private allChampions: RawChampion[];
   private ownedChampions: Champion[];
   private autoPickIsTurnedOn = false;
-  private autoAcceptIsTurnedOn = false;
+  private autoAcceptIsTurnedOn = true;
   private summoner: Summoner;
   private orderedPicks: Champion[] = [];
   private orderedBans: Champion[] = [];
@@ -53,8 +53,7 @@ export class LoLApi {
   }
 
   private findPick(): number {
-    let pick = -1;
-    return pick;
+    return this.gameSession.findPick(this.orderedPicks);
   }
 
   private handlePickIntent(actions: any, localCellId: number): void {
@@ -176,6 +175,7 @@ export class LoLApi {
       //if it is ready check message
       if (js.uri.includes('/lol-matchmaking/v1/ready-check')) {
         const readyData: ReadyCheckData = js.data;
+        if (readyData === null) return;
         if (this.autoAcceptIsTurnedOn) {
           if (
             readyData.state === 'InProgress' &&
@@ -255,7 +255,6 @@ export class LoLApi {
         this.sendUpdate();
         // end if turned on
       }
-
     } catch (e) {
       console.error(e);
     }
