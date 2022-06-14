@@ -18,9 +18,13 @@ import { resolveHtmlPath } from './util';
 import unhandled from 'electron-unhandled';
 
 import { authenticate, request, connect, LeagueClient } from 'league-connect';
-import { LolApi } from './api/LolApi';
-import { BANS, PICKS } from '../common/constants';
-import { Champion } from 'common/Champion';
+import { LoLApi } from '../api/LolApi';
+import { BANS, PICKS, ROLE } from '../common/constants';
+import { Champion } from 'api/entities/Champion';
+import { Role } from 'api/entities/Role';
+import { FrontendMessage } from 'api/MessageTypes/FrontendMessage';
+import { RawChampion } from 'api/entities/RawChampion';
+import { Summoner } from 'api/entities/Summoner';
 
 function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -28,7 +32,7 @@ function sleep(ms: number) {
   });
 }
 
-let API: LolApi;
+let API: LoLApi;
 
 export default class AppUpdater {
   constructor() {
@@ -113,13 +117,13 @@ const createWindow = async () => {
       mainWindow.show();
     }
     const credentials = await authenticate({ awaitConnection: true });
-
+    console.log(credentials);
     await sleep(10000);
 
     const client = new LeagueClient(credentials);
     const ws = await connect(credentials);
 
-    const summoner = await (
+    const summoner: Summoner = await (
       await request(
         {
           method: 'GET',
@@ -137,7 +141,7 @@ const createWindow = async () => {
       },
       credentials
     );
-    let champions;
+    let champions: RawChampion[] = [];
     if (championsReq.status == 200) {
       champions = await championsReq.json();
     } else {
@@ -158,10 +162,23 @@ const createWindow = async () => {
       }, 10000);
     }
 
-    let bans: Champion[] = (await store.get(BANS)) as Champion[];
-    let picks: Champion[] = (await store.get(PICKS)) as Champion[];
+    const bans: Champion[] = (await store.get(BANS)) as Champion[];
+    const picks: Champion[] = (await store.get(PICKS)) as Champion[];
+    const role: Role = (await store.get(ROLE)) as Role;
 
-    API = new LolApi(credentials, summoner, bans, picks);
+    const sendFunction = (eventName: string, message: FrontendMessage) => {
+      mainWindow?.webContents.send(eventName, message);
+    };
+
+    API = new LoLApi(
+      credentials,
+      summoner,
+      bans,
+      picks,
+      role,
+      champions,
+      sendFunction
+    );
 
     const dataSend = {
       sucess: true,

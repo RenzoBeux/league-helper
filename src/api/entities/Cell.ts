@@ -1,4 +1,4 @@
-export enum type {
+export enum Type {
   ban = 'ban',
   pick = 'pick',
   ten_bans_reveal = 'ten_bans_reveal',
@@ -11,5 +11,5 @@ export type Cell = {
   id: number;
   isAllyAction: boolean;
   isInProgress: boolean;
-  type: type;
+  type: Type;
 };

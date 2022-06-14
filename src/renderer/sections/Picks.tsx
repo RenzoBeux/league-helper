@@ -4,9 +4,9 @@ import { ItemPredicate, ItemRenderer, Select } from '@blueprintjs/select';
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BANS, PICKS } from '../../common/constants';
-import { IChamp } from 'renderer/interfaces/IChamp';
 import { useAppDispatch, useAppSelector } from 'renderer/state/hooks';
 import { setPicks } from 'renderer/state/slices/preferencesSlice';
+import { Champion } from 'api/entities/Champion';
 
 const Picks = () => {
   const picks = useAppSelector((state) => state.preferences.picks);
@@ -14,16 +14,16 @@ const Picks = () => {
   const dispatch = useAppDispatch();
 
   // save an item
-  const addItem = (item: IChamp) => {
+  const addItem = (item: Champion) => {
     let aux = [...picks];
-    if (aux.some((ban: IChamp) => ban.id === item.id)) {
+    if (aux.some((ban: Champion) => ban.id === item.id)) {
       return;
     }
     aux.push(item);
     dispatch(setPicks(aux));
   };
 
-  const renderChamp: ItemRenderer<IChamp> = (
+  const renderChamp: ItemRenderer<Champion> = (
     champ,
     { handleClick, modifiers, query }
   ) => {
@@ -42,9 +42,9 @@ const Picks = () => {
     );
   };
 
-  const filterChamp: ItemPredicate<IChamp> = (query, champ) => {
-    return champ.name.toLowerCase().indexOf(query.toLowerCase()) >=0;
-  }
+  const filterChamp: ItemPredicate<Champion> = (query, champ) => {
+    return champ.name.toLowerCase().indexOf(query.toLowerCase()) >= 0;
+  };
 
   const handleSaveButton = () => {
     console.log(picks);
@@ -58,11 +58,11 @@ const Picks = () => {
 
   const handleDelete = (id: number) => {
     let aux = [...picks];
-    aux = aux.filter((pick: IChamp) => pick.id !== id);
+    aux = aux.filter((pick: Champion) => pick.id !== id);
     dispatch(setPicks(aux));
   };
 
-  const ChampSelect = Select.ofType<IChamp>();
+  const ChampSelect = Select.ofType<Champion>();
   const navigate = useNavigate();
   return (
     <div className="picks">
@@ -86,7 +86,7 @@ const Picks = () => {
         </ChampSelect>
       </Card>
       {picks &&
-        picks.map((pick: IChamp) => {
+        picks.map((pick: Champion) => {
           return (
             <Card key={pick.id}>
               {pick.name}

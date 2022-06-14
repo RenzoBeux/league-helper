@@ -5,4 +5,5 @@ module.exports = {
   HANDLE_SAVE_DATA: 'handle-save-data',
   BANS: 'bans-data',
   PICKS: 'picks-data',
+  ROLE: 'expected-role'
 };
