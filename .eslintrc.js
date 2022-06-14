@@ -6,7 +6,7 @@ module.exports = {
     'import/no-unresolved': 'error',
     // Since React 17 and typescript 4.1 you can safely disable the rule
     'react/react-in-jsx-scope': 'off',
-    'react/jsx-no-bind', 'off'
+    'react/jsx-no-bind': 'off'
   },
   parserOptions: {
     ecmaVersion: 2020,
