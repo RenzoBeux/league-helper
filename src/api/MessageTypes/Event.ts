@@ -1,3 +1,4 @@
-export enum Event {
-    StatusUpdate = 'STATUS_UPDATE',
+enum Event {
+  StatusUpdate = 'STATUS_UPDATE',
 }
+export default Event;

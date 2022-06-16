@@ -1,3 +1,3 @@
-import { StatusMessage } from "./StatusMessage";
+import { StatusMessage } from './StatusMessage';
 
-export type FrontendMessage = StatusMessage | {}
+export type FrontendMessage = StatusMessage;

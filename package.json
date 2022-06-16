@@ -65,6 +65,7 @@
     "browserslist": [],
     "prettier": {
       "singleQuote": true,
+      "tabWidth": 4,
       "overrides": [
         {
           "files": [
@@ -287,4 +288,3 @@
       "logLevel": "quiet"
     }
   }
-  

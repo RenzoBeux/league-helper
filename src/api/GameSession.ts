@@ -1,10 +1,10 @@
-import { Champion } from './entities/Champion';
-import { Phase } from './entities/Phase';
-import { Role } from './entities/Role';
+import Champion from './entities/Champion';
+import Phase from './entities/Phase';
+import Role from './entities/Role';
 import { Cell, Type } from './entities/Cell';
 import { TeamElement } from './entities/TeamElement';
 import { FrontendMessage } from './MessageTypes/FrontendMessage';
-import { Event } from './MessageTypes/Event';
+import Event from './MessageTypes/Event';
 import { StatusMessage } from './MessageTypes/StatusMessage';
 
 export class GameSession {

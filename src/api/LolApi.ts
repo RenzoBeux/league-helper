@@ -1,44 +1,54 @@
-import { Champion } from 'api/entities/Champion';
-import { Role } from 'api/entities/Role';
+import Champion from 'api/entities/Champion';
+import Role from 'api/entities/Role';
 import { request, Credentials } from 'league-connect';
 import { Cell, Type } from './entities/Cell';
 import { GameSession } from './GameSession';
 import { Summoner } from './entities/Summoner';
-import { Event } from './MessageTypes/Event';
+import Event from './MessageTypes/Event';
 import { FrontendMessage } from './MessageTypes/FrontendMessage';
 import { RawChampion } from './entities/RawChampion';
 import { ReadyCheckData } from './entities/ReadyCheckData';
 
-export class LoLApi {
+class LoLApi {
   private credentials: Credentials | undefined;
+
   private allChampions: RawChampion[];
+
   private ownedChampions: Champion[];
+
   private autoPickIsTurnedOn = false;
+
   private autoAcceptIsTurnedOn = true;
+
   private summoner: Summoner;
+
   private orderedPicks: Champion[] = [];
+
   private orderedBans: Champion[] = [];
+
   private expectedRole: Role;
+
   private gameSession: GameSession = new GameSession(-1, [], -1);
+
   private sendToFrontend: (
     event: Event,
     FrontendMessage: FrontendMessage
   ) => void;
 
-  //this function looks for a cell in action list
-  private findCell(
+  // this function looks for a cell in action list
+  static findCell(
     list: Array<Cell>[],
     cellId: number,
     type?: string,
     isInProgress?: boolean
   ): Cell | null {
     let temp = null;
-    let predicate = (cell: Cell) =>
+    const predicate = (cell: Cell) =>
       cell.id === cellId &&
       (type === undefined || cell.type === type) &&
       (isInProgress === undefined || cell.isInProgress === isInProgress);
 
-    //each item is an array wich contains cells
+    // each item is an array wich contains cells
     list.forEach((item) => {
       item.forEach((cell: Cell) => {
         if (predicate(cell)) temp = cell;
@@ -57,13 +67,13 @@ export class LoLApi {
   }
 
   private handlePickIntent(actions: any, localCellId: number): void {
-    let pickIntentAction = this.findCell(actions, localCellId, Type.pick);
+    const pickIntentAction = LoLApi.findCell(actions, localCellId, Type.pick);
     if (pickIntentAction === null) return;
     setTimeout(() => {
       request(
         {
           method: 'PATCH',
-          url: '/lol-champ-select/v1/session/actions/' + pickIntentAction?.id,
+          url: `/lol-champ-select/v1/session/actions/${pickIntentAction?.id}`,
           body: {
             championId: this.findPick(),
           },
@@ -78,7 +88,7 @@ export class LoLApi {
       request(
         {
           method: 'PATCH',
-          url: '/lol-champ-select/v1/session/actions/' + action.id,
+          url: `/lol-champ-select/v1/session/actions/${action.id}`,
           body: action,
         },
         this.credentials
@@ -89,7 +99,7 @@ export class LoLApi {
   private handleBan(action: Cell) {
     action.championId = this.findBan();
     action.completed = true;
-    //TODO: wait for last seconds before finishing the action to let user override it
+    // TODO: wait for last seconds before finishing the action to let user override it
     this.doPatch(action);
   }
 
@@ -98,16 +108,23 @@ export class LoLApi {
     action.completed = true;
     this.doPatch(action);
   }
+
   private async sendUpdate() {
     const role = this.gameSession.getRole();
     const picks = this.gameSession.getPickedChampions();
     const bans = this.gameSession.getBannedChampions();
-    const pickedChampions = picks.map((championNumber) =>
-      this.allChampions.find((champion) => champion.id === championNumber)
-    );
-    const bannedChampions = bans.map((championNumber) =>
-      this.allChampions.find((champion) => champion.id === championNumber)
-    );
+    const pickedChampions = picks.map((championNumber) => {
+      const champ = this.allChampions.find(
+        (champion) => champion.id === championNumber
+      ) as RawChampion;
+      return Champion.fromRaw(champ);
+    });
+    const bannedChampions = bans.map((championNumber) => {
+      const champ = this.allChampions.find(
+        (champion) => champion.id === championNumber
+      ) as RawChampion;
+      return Champion.fromRaw(champ);
+    });
     const phase = this.gameSession.getPhase();
     const update: FrontendMessage = {
       pickedChampions,
@@ -118,7 +135,7 @@ export class LoLApi {
     this.sendToFrontend(Event.StatusUpdate, update);
   }
 
-  //Constructor
+  // Constructor
   constructor(
     credentials: Credentials,
     summoner: Summoner,
@@ -164,15 +181,15 @@ export class LoLApi {
     this.orderedBans = bans;
   }
 
-  //data is stringified json array
+  // data is stringified json array
   async handleWebSocket(data: string) {
     let action: Cell | null;
     let localCellId: number;
     try {
-      //GET SOME DATA
-      let js = JSON.parse(data)[2];
+      // GET SOME DATA
+      const js = JSON.parse(data)[2];
 
-      //if it is ready check message
+      // if it is ready check message
       if (js.uri.includes('/lol-matchmaking/v1/ready-check')) {
         const readyData: ReadyCheckData = js.data;
         if (readyData === null) return;
@@ -181,7 +198,7 @@ export class LoLApi {
             readyData.state === 'InProgress' &&
             readyData.playerResponse === 'None'
           ) {
-            //if it is in progress and the player has not responded yet
+            // if it is in progress and the player has not responded yet
             // accepts the game
             setTimeout(() => {
               request(
@@ -196,11 +213,11 @@ export class LoLApi {
         }
       }
 
-      //if it is a game session message
+      // if it is a game session message
       if (js.uri.includes('lol-champ-select/v1/session')) {
         if (!js.data.actions[0]) return;
 
-        let myTeam = js.data.myTeam;
+        const { myTeam } = js.data;
         localCellId = js.data.localPlayerCellId;
 
         if (js.gameId !== this.gameSession.getGameId()) {
@@ -209,8 +226,8 @@ export class LoLApi {
 
         this.gameSession.processData(js.data.actions);
 
-        //SHUT DOWN AUTO PICK IF ROLE IS NOT AS EXPECTED
-        //WILL CHANGE LATER WHEN WE HAVE PROFILES
+        // SHUT DOWN AUTO PICK IF ROLE IS NOT AS EXPECTED
+        // WILL CHANGE LATER WHEN WE HAVE PROFILES
         if (this.expectedRole !== this.gameSession.getRole()) {
           this.autoPickIsTurnedOn = false;
         }
@@ -218,13 +235,13 @@ export class LoLApi {
           action is the action that is in progress of the player who is running this tool
           if there is no action in progress for current player then null is returned
         */
-        action = this.findCell(js.data.actions, localCellId, undefined, true);
+        action = LoLApi.findCell(js.data.actions, localCellId, undefined, true);
 
-        //Execute this code only if autopick is turned on
+        // Execute this code only if autopick is turned on
         if (this.autoPickIsTurnedOn) {
-          //We want this code to be here, before returning is action is null
-          //because on planning phase no one is in progress
-          //PLANNING PHASE
+          // We want this code to be here, before returning is action is null
+          // because on planning phase no one is in progress
+          // PLANNING PHASE
           if (js.data.timer.phase === 'PLANNING') {
             this.handlePickIntent(js.data.actions, localCellId);
             return;
@@ -232,7 +249,7 @@ export class LoLApi {
 
           // If there is no action in progress for current player then return
           if (!action) return;
-          //TODO: Change this to use gameSession info
+          // TODO: Change this to use gameSession info
           switch (action.type) {
             case Type.ban:
               this.handleBan(action);
@@ -251,7 +268,7 @@ export class LoLApi {
         console.log('PHASE!!!', this.gameSession.getPhase());
         console.log('---------------------------------------');
 
-        //SEND DATA TO FRONTEND
+        // SEND DATA TO FRONTEND
         this.sendUpdate();
         // end if turned on
       }
@@ -260,3 +277,5 @@ export class LoLApi {
     }
   }
 }
+
+export default LoLApi;

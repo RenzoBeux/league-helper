@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Champion } from 'api/entities/Champion';
+import Champion from 'api/entities/Champion';
 
 // Define a type for the slice state
 export interface PreferencesState {
@@ -14,10 +14,16 @@ const initialState: PreferencesState = {
 } as PreferencesState;
 
 const reducer = {
-  setBans: (state:PreferencesState, action: PayloadAction<Array<Champion>>) => {
+  setBans: (
+    state: PreferencesState,
+    action: PayloadAction<Array<Champion>>
+  ) => {
     state.bans = action.payload;
   },
-  setPicks: (state:PreferencesState, action: PayloadAction<Array<Champion>>) => {
+  setPicks: (
+    state: PreferencesState,
+    action: PayloadAction<Array<Champion>>
+  ) => {
     state.picks = action.payload;
   },
 };

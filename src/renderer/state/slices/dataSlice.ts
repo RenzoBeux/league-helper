@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Champion } from 'api/entities/Champion';
+import Champion from 'api/entities/Champion';
 
 // Define a type for the slice state
 export interface DataState {

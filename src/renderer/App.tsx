@@ -20,7 +20,7 @@ import {
 import { useAppDispatch } from './state/hooks';
 import { setBans, setPicks } from './state/slices/preferencesSlice';
 import Picks from './sections/Picks';
-import { Champion } from 'api/entities/Champion';
+import Champion from 'api/entities/Champion';
 import { setChampions } from './state/slices/dataSlice';
 
 function App() {
