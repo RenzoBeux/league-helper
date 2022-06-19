@@ -8,4 +8,6 @@ module.exports = {
     ROLE: 'expected-role',
     AUTOPICK_STATE: 'autopick-state',
     AUTOACCEPT_STATE: 'autoaccept-state',
+    RAWCHAPIONS: 'raw-champions',
+    SUMMONER: 'summoner-data',
 };

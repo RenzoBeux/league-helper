@@ -15,22 +15,33 @@ import log from 'electron-log';
 import Store from 'electron-store';
 import unhandled from 'electron-unhandled';
 
-import { authenticate, request, connect, LeagueClient } from 'league-connect';
-import Champion from 'api/entities/Champion';
+import {
+    authenticate,
+    request,
+    connect,
+    LeagueClient,
+    Credentials,
+} from 'league-connect';
 import Role from 'api/entities/Role';
 import { FrontendMessage } from 'api/MessageTypes/FrontendMessage';
 import { RawChampion } from 'api/entities/RawChampion';
 import { Summoner } from 'api/entities/Summoner';
+import Champion from 'api/entities/Champion';
+import {
+    ChampionsMessage,
+    SummonerMessage,
+} from 'api/MessageTypes/InitialMessage';
 import {
     AUTOACCEPT_STATE,
     AUTOPICK_STATE,
     BANS,
     PICKS,
+    RAWCHAPIONS,
     ROLE,
+    SUMMONER,
 } from '../common/constants';
 import LoLApi from '../api/LolApi';
 import { resolveHtmlPath } from './util';
-import MenuBuilder from './menu';
 
 function sleep(ms: number) {
     return new Promise((resolve) => {
@@ -68,7 +79,7 @@ unhandled({
         console.error();
     },
     showDialog: true,
-    reportButton: (error) => {
+    reportButton: () => {
         console.log('Report Button Initialized');
     },
 });
@@ -85,6 +96,147 @@ const installExtensions = async () => {
         )
         .catch(console.log);
 };
+
+async function getLolSummonerAsync(
+    credentials: Credentials
+): Promise<Summoner> {
+    const summonerReq = await request(
+        {
+            method: 'GET',
+            url: '/lol-summoner/v1/current-summoner',
+        },
+        credentials
+    );
+    // if request fails, retry after sleeping 5 seconds
+    if (summonerReq.status !== 200) {
+        await sleep(1000);
+        const sum = await getLolSummonerAsync(credentials);
+        return sum;
+    }
+    return (await summonerReq.json()) as Summoner;
+}
+
+async function getLolChampionsAsync(
+    summoner: Summoner,
+    credentials: Credentials
+): Promise<RawChampion[]> {
+    const championsReq = await request(
+        {
+            method: 'GET',
+            url: `/lol-champions/v1/inventories/${summoner.summonerId}/champions`,
+        },
+        credentials
+    );
+    // if request fails, retry after sleeping 5 seconds
+    if (championsReq.status !== 200) {
+        await sleep(1000);
+        const res = await getLolChampionsAsync(summoner, credentials);
+        return res;
+    }
+    return (await championsReq.json()) as RawChampion[];
+}
+
+async function startLoLApi() {
+    try {
+        const credentials = await authenticate({ awaitConnection: true });
+        console.log(credentials);
+        await sleep(5000);
+        const client = new LeagueClient(credentials);
+
+        const summonerReq = await request(
+            {
+                method: 'GET',
+                url: '/lol-summoner/v1/current-summoner',
+            },
+            credentials
+        );
+        let summoner: Summoner;
+        if (summonerReq.status === 200) {
+            summoner = await summonerReq.json();
+        } else {
+            await sleep(1000);
+            summoner = await getLolSummonerAsync(credentials);
+        }
+
+        const championsReq = await request(
+            {
+                method: 'GET',
+                url: `/lol-champions/v1/inventories/${summoner.summonerId}/champions`,
+            },
+            credentials
+        );
+        let champions: RawChampion[] = ((await store.get(RAWCHAPIONS)) ||
+            []) as RawChampion[];
+        if (championsReq.status === 200) {
+            champions = await championsReq.json();
+            store.set(RAWCHAPIONS, champions);
+        } else {
+            await sleep(10000);
+            champions = await getLolChampionsAsync(summoner, credentials);
+        }
+
+        const bans: Champion[] = (await store.get(BANS)) as Champion[];
+        const picks: Champion[] = (await store.get(PICKS)) as Champion[];
+        const role: Role = (await store.get(ROLE)) as Role;
+
+        const sendFunction = (eventName: string, message: FrontendMessage) => {
+            mainWindow?.webContents.send(eventName, message);
+        };
+
+        API = new LoLApi(
+            credentials,
+            summoner,
+            bans,
+            picks,
+            role,
+            champions,
+            sendFunction
+        );
+
+        const summonerSend: SummonerMessage = {
+            success: true,
+            summoner,
+        };
+        const championsSend: ChampionsMessage = {
+            success: champions.length !== 0,
+            champions,
+        };
+
+        // Basically we send connect because we found the LoLClient
+        // Then we send Summoner and Champions separately
+        mainWindow?.webContents.send('connect', {});
+        mainWindow?.webContents.send(SUMMONER, summonerSend);
+        mainWindow?.webContents.send(RAWCHAPIONS, championsSend);
+
+        const ws = await connect(credentials);
+
+        ws.on('message', (message) => {
+            if (typeof message === 'string') {
+                API.handleWebSocket(message);
+            }
+        });
+
+        client.on('connect', () => {
+            // newCredentials: Each time the Client is started, new credentials are made
+            // this variable contains the new credentials.
+            mainWindow?.webContents.send('connect', {});
+            console.log('RECONECTADOOO');
+        });
+
+        client.on('disconnect', () => {
+            mainWindow?.webContents.send('disconnect', {});
+            console.log('disconnected');
+        });
+
+        client.start(); // Start listening for process updates
+    } catch (error) {
+        console.error(error);
+        // re try startLoLApi after 5 seconds
+        console.log('retying to start LoLApi');
+        await sleep(5000);
+        return startLoLApi();
+    }
+}
 
 const createWindow = async () => {
     if (isDebug) {
@@ -127,100 +279,12 @@ const createWindow = async () => {
         } else {
             mainWindow.show();
         }
-
-        const credentials = await authenticate({ awaitConnection: true });
-        console.log(credentials);
-        await sleep(10000);
-        const client = new LeagueClient(credentials);
-        const ws = await connect(credentials);
-
-        const summoner: Summoner = await (
-            await request(
-                {
-                    method: 'GET',
-                    url: '/lol-summoner/v1/current-summoner',
-                },
-                credentials
-            )
-        ).json();
-
-        const championsReq = await request(
-            {
-                method: 'GET',
-                url: `/lol-champions/v1/inventories/${summoner.summonerId}/champions`,
-            },
-            credentials
-        );
-        let champions: RawChampion[] = [];
-        if (championsReq.status === 200) {
-            champions = await championsReq.json();
-        } else {
-            setTimeout(async () => {
-                const res = await (
-                    await request(
-                        {
-                            method: 'GET',
-                            url: `/lol-champions/v1/inventories/${summoner.summonerId}/champions`,
-                        },
-                        credentials
-                    )
-                ).json();
-                champions = res;
-            }, 10000);
-        }
-
-        const bans: Champion[] = (await store.get(BANS)) as Champion[];
-        const picks: Champion[] = (await store.get(PICKS)) as Champion[];
-        const role: Role = (await store.get(ROLE)) as Role;
-
-        const sendFunction = (eventName: string, message: FrontendMessage) => {
-            mainWindow?.webContents.send(eventName, message);
-        };
-
-        API = new LoLApi(
-            credentials,
-            summoner,
-            bans,
-            picks,
-            role,
-            champions,
-            sendFunction
-        );
-
-        const dataSend = {
-            sucess: true,
-            message: {
-                summoner,
-                champions,
-            },
-        };
-        mainWindow.webContents.send('connect', dataSend);
-
-        ws.on('message', (message) => {
-            if (typeof message === 'string') {
-                API.handleWebSocket(message);
-            }
-        });
-
-        client.on('connect', (newCredentials) => {
-            // newCredentials: Each time the Client is started, new credentials are made
-            // this variable contains the new credentials.
-            console.log('RECONECTADOOO');
-        });
-
-        client.on('disconnect', () => {
-            console.log('disconnected');
-        });
-
-        client.start(); // Start listening for process updates
+        await startLoLApi();
     });
 
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
-
-    const menuBuilder = new MenuBuilder(mainWindow);
-    menuBuilder.buildMenu();
 
     // Open urls in the user's browser
     mainWindow.webContents.setWindowOpenHandler((edata) => {
@@ -259,7 +323,7 @@ app.whenReady()
 ipcMain.on('electron-store-get', async (event, val) => {
     event.returnValue = store.get(val);
 });
-ipcMain.on('electron-store-set', async (event, key, val) => {
+ipcMain.on('electron-store-set', async (_event, key, val) => {
     if (API) {
         switch (key) {
             case BANS:
@@ -280,7 +344,7 @@ ipcMain.on('electron-store-set', async (event, key, val) => {
     }
     store.set(key, val);
 });
-ipcMain.on('electron-store-clear', async (event) => {
+ipcMain.on('electron-store-clear', async () => {
     store.clear();
     console.log('CLEARED');
 });

@@ -9,44 +9,56 @@ import './App.css';
 
 import { HashRouter, Link, Route, Routes } from 'react-router-dom';
 
+import Champion from 'api/entities/Champion';
+import { ChampionsMessage } from 'api/MessageTypes/InitialMessage';
 import { Desktop } from './sections/Desktop';
 import Bans from './sections/Bans';
 import {
-  BANS,
-  HANDLE_FETCH_DATA,
-  HANDLE_SAVE_DATA,
-  PICKS,
+    BANS,
+    HANDLE_FETCH_DATA,
+    HANDLE_SAVE_DATA,
+    PICKS,
+    RAWCHAPIONS,
+    SUMMONER,
 } from '../common/constants';
 import { useAppDispatch } from './state/hooks';
 import { setBans, setPicks } from './state/slices/preferencesSlice';
 import Picks from './sections/Picks';
-import Champion from 'api/entities/Champion';
 import { setChampions } from './state/slices/dataSlice';
 
 function App() {
-  const dispatch = useAppDispatch();
+    const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    let bans: Array<Champion> = window.electron.store.get(BANS) || [];
-    let picks: Array<Champion> = window.electron.store.get(PICKS) || [];
-    dispatch(setBans(bans));
-    dispatch(setPicks(picks));
-  }, []);
+    useEffect(() => {
+        const bans: Array<Champion> = window.electron.store.get(BANS) || [];
+        const picks: Array<Champion> = window.electron.store.get(PICKS) || [];
+        dispatch(setBans(bans));
+        dispatch(setPicks(picks));
+    }, []);
 
-  window.electron.ipcRenderer.on('connect', (event, data) => {
-    dispatch(setChampions(event.message.champions));
-    console.log(event);
-  });
+    window.electron.ipcRenderer.on('connect', (event, data) => {
+        // dispatch(setChampions(event.message.champions));
+        console.log(event);
+    });
 
-  return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<Desktop />} />
-        <Route path="/bans" element={<Bans />} />
-        <Route path="/picks" element={<Picks />} />
-      </Routes>
-    </HashRouter>
-  );
+    window.electron.ipcRenderer.on(SUMMONER, (event, data) => {
+        console.log(event);
+    });
+
+    window.electron.ipcRenderer.on(RAWCHAPIONS, (event, data) => {
+        console.log(event);
+        dispatch(setChampions((event as ChampionsMessage).champions));
+    });
+
+    return (
+        <HashRouter>
+            <Routes>
+                <Route path="/" element={<Desktop />} />
+                <Route path="/bans" element={<Bans />} />
+                <Route path="/picks" element={<Picks />} />
+            </Routes>
+        </HashRouter>
+    );
 }
 
 export default App;

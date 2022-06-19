@@ -1,6 +1,6 @@
 enum Phase {
-  Banning = 'banning',
-  Picking = 'picking',
-  RevealingBans = 'revealingBans',
+    Banning = 'banning',
+    Picking = 'picking',
+    RevealingBans = 'revealingBans',
 }
 export default Phase;
